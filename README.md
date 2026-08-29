@@ -15,24 +15,6 @@
 
 ---
 
-## 📖 Full documentation
-
-Detailed guides live in **[`docs/`](./docs/)**:
-
-| Guide | Contents |
-|---|---|
-| [Architecture](./docs/architecture.md) | System diagram, component map, request lifecycle, design trade-offs |
-| [API Reference](./docs/api-reference.md) | Endpoints, schemas, every status code, curl/JS/Python examples |
-| [ML Pipeline](./docs/ml-pipeline.md) | Windowing, masking, the verdict algorithm, explanation generation, training |
-| [Backend Guide](./docs/backend.md) | The batching queue, inference worker, concurrency model |
-| [Frontend Guide](./docs/frontend.md) | React structure, the live analyzer engine, audio utilities |
-| [Setup Guide](./docs/setup.md) | Step-by-step install + verification checklist |
-| [Configuration](./docs/configuration.md) | Every env var and constant, with tuning recipes |
-| [Deployment](./docs/deployment.md) | Docker, CORS, scaling, hardening |
-| [Troubleshooting](./docs/troubleshooting.md) | Symptom → cause → fix |
-
----
-
 ## 📑 Table of Contents
 
 1. [What this project is](#-what-this-project-is)
