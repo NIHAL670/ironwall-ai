@@ -53,3 +53,5 @@ pnpm-debug.log*
 Thumbs.db
 
 note.md
+
+ml-services/model/
