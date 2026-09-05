@@ -165,8 +165,8 @@ export function useLiveAnalyzer({ language = 'English', onFinal } = {}) {
         audio: {
           channelCount: 1,
           echoCancellation: true,
-          noiseSuppression: false,
-          autoGainControl: false,
+          noiseSuppression: true,
+          autoGainControl: true,
         },
       })
       streamRef.current = stream

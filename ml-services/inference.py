@@ -95,6 +95,8 @@ def max_consecutive_ratio(mask):
     for v in mask:
         run = run + 1 if v else 0
         max_run = max(max_run, run)
+    if max_run < 2 and len(mask) >= 2:
+        return 0.0
     return max_run / len(mask)
 
 def robust_score(scores):
@@ -132,15 +134,20 @@ class SecureInference:
             chunks_audio.append(a)
             chunks_mask.append(m)
         else:
+            last_end = 0
             for i in range(0, len(y) - win_len + 1, stride):
                 chunk = y[i : i + win_len]
                 a, m = process_audio_chunk(chunk)
                 chunks_audio.append(a)
                 chunks_mask.append(m)
+                last_end = i + win_len
 
-            remainder = y[i + stride :]
-            if len(remainder) > int(1.5 * config.SR):
-                a, m = process_audio_chunk(remainder)
+            # Check if there is trailing audio (at least 1.5s) not covered by the last window
+            uncovered = len(y) - last_end
+            if uncovered > int(1.5 * config.SR):
+                # Align the final window to the end of the audio to avoid artificial zero-padding
+                chunk = y[-win_len:]
+                a, m = process_audio_chunk(chunk)
                 chunks_audio.append(a)
                 chunks_mask.append(m)
 
@@ -178,24 +185,45 @@ class SecureInference:
         strong_ratio = strong_mask.mean()
         run_ratio = max_consecutive_ratio(ai_mask)
 
-        MIN_AI_RATIO = max(0.20, 1.0 / N)
-        MIN_STRONG_RATIO = max(0.08, 1.0 / N)
-        MIN_RUN_RATIO = max(0.15, 1.0 / N)
-
-        is_ai = ai_ratio >= MIN_AI_RATIO and (
-            strong_ratio >= MIN_STRONG_RATIO or run_ratio >= MIN_RUN_RATIO
-        )
-
         final_score = float(np.clip(robust_score(scores), 1e-6, 1.0 - 1e-6))
 
-        if is_ai:
-            label = "AI_GENERATED"
-            confidence = min(1.0, 0.4 * ai_ratio + 0.3 * strong_ratio + 0.3 * run_ratio)
+        if N == 1:
+            # Single isolated segment (e.g. live streaming chunks): require clear synthetic confidence
+            # to prevent borderline scores (e.g. 0.581) from triggering false alarms.
+            is_ai = bool(strong_mask[0])
+            if is_ai:
+                label = "AI_GENERATED"
+                confidence = min(1.0, max(0.60, float(scores[0])))
+            else:
+                label = "HUMAN"
+                confidence = min(1.0, max(0.60, 1.0 - float(scores[0])))
+        elif N <= 3:
+            # Short takes (e.g. 6-15s): avoid single isolated spikes (mic pops, pauses, language artifacts)
+            # from flipping an otherwise human recording to AI. Requires synthetic majority (> 50%) AND overall synthetic mean.
+            is_ai = (ai_ratio > 0.50 and final_score >= threshold) or (strong_ratio >= 0.60 and final_score >= threshold)
+            if is_ai:
+                label = "AI_GENERATED"
+                confidence = min(1.0, max(0.55, final_score))
+            else:
+                label = "HUMAN"
+                confidence = min(1.0, max(0.60, 1.0 - final_score))
         else:
-            label = "HUMAN"
-            confidence = min(
-                1.0, 0.6 * (1 - ai_ratio) + 0.4 * (threshold - final_score) / threshold
+            MIN_AI_RATIO = max(0.20, 1.0 / N)
+            MIN_STRONG_RATIO = max(0.08, 1.0 / N)
+            MIN_RUN_RATIO = max(0.15, 2.0 / N)
+
+            is_ai = ai_ratio >= MIN_AI_RATIO and (
+                strong_ratio >= MIN_STRONG_RATIO or run_ratio >= MIN_RUN_RATIO
             )
+
+            if is_ai:
+                label = "AI_GENERATED"
+                confidence = min(1.0, 0.4 * ai_ratio + 0.3 * strong_ratio + 0.3 * run_ratio)
+            else:
+                label = "HUMAN"
+                confidence = min(
+                    1.0, 0.6 * (1 - ai_ratio) + 0.4 * (threshold - final_score) / threshold
+                )
 
         confidence = max(0.0, min(confidence, 1.0))
 

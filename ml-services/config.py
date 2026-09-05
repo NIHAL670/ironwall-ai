@@ -8,7 +8,7 @@ class Config:
 
     # Inference
     DEPLOY_THRESHOLD = 0.58  # Needs calibration on your validation set
-    SLIDING_WINDOW_STRIDE = 2.0  # Seconds
+    SLIDING_WINDOW_STRIDE = 2.5  # Seconds (50% overlap on 5s window)
 
     # Training
     BATCH_SIZE = 4

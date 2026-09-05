@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, AudioLines, Radio, History, ShieldCheck, BarChart3, Menu, X } from 'lucide-react'
+import { NavLink, Link } from 'react-router-dom'
+import { Home, LayoutDashboard, AudioLines, Radio, History, ShieldCheck, BarChart3, Menu, X } from 'lucide-react'
 import { APP_NAME } from '../config/env.js'
 
 const links = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/', label: 'Home', icon: Home, end: true },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/analyze', label: 'Analyze Audio', icon: AudioLines },
   { to: '/live', label: 'Live Monitor', icon: Radio, live: true },
   { to: '/history', label: 'Scan History', icon: History },
@@ -25,13 +26,13 @@ export default function Sidebar() {
       </button>
 
       <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
-        <div className="brand">
+        <Link to="/" className="brand" title="Return to Start Page" style={{ textDecoration: 'none' }}>
           <ShieldCheck size={22} />
           <div>
             <strong>{APP_NAME}</strong>
             <span>Detection Console</span>
           </div>
-        </div>
+        </Link>
 
         <nav className="nav">
           {links.map(({ to, label, icon: Icon, end, live }) => (

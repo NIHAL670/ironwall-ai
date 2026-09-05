@@ -4,7 +4,8 @@ import { useHealth } from '../hooks/useHealth.js'
 import { API_INFO } from '../api/client.js'
 
 const titles = {
-  '/': 'Dashboard',
+  '/': 'Welcome',
+  '/dashboard': 'Dashboard',
   '/analyze': 'Analyze Audio',
   '/live': 'Live Monitor',
   '/history': 'Scan History',

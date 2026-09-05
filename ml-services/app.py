@@ -80,7 +80,7 @@ MAX_QUEUE_SIZE = int(os.getenv("MAX_QUEUE_SIZE", 64))
 BATCH_WAIT_MS = int(os.getenv("BATCH_WAIT_MS", 100))
 MAX_CHUNKS_PER_BATCH = int(os.getenv("MAX_CHUNKS_PER_BATCH", 32))
 MAX_CONCURRENT_BATCHES = int(os.getenv("MAX_CONCURRENT_BATCHES", 1))
-INFERENCE_TIMEOUT = int(os.getenv("INFERENCE_TIMEOUT", 30))
+INFERENCE_TIMEOUT = int(os.getenv("INFERENCE_TIMEOUT", 120))
 
 inference_queue = asyncio.Queue(MAX_QUEUE_SIZE)
 semaphore = asyncio.Semaphore(MAX_CONCURRENT_BATCHES)
@@ -98,6 +98,8 @@ def build_chunk_batch(jobs):
             break
 
         take = min(job.remaining(), MAX_CHUNKS_PER_BATCH - used)
+        if take <= 0:
+            continue
         s, e = job.offset, job.offset + take
 
         audio_list.append(job.audio_chunks[s:e])
@@ -107,6 +109,13 @@ def build_chunk_batch(jobs):
 
         job.offset += take
         used += take
+
+    if not audio_list:
+        return (
+            tf.zeros((0, config.INPUT_LEN), dtype=tf.float32),
+            tf.zeros((0, config.INPUT_LEN), dtype=tf.int32),
+            slice_map,
+        )
 
     return (
         tf.concat(audio_list, axis=0),
@@ -148,8 +157,10 @@ async def inference_worker():
     pending = []
 
     while True:
-        job = await inference_queue.get()
-        pending.append(job)
+        # If no jobs are in progress, wait for a new job from the queue
+        if not pending:
+            job = await inference_queue.get()
+            pending.append(job)
 
         start = time.time()
         while time.time() - start < BATCH_WAIT_MS / 1000:
@@ -158,11 +169,19 @@ async def inference_worker():
             except asyncio.QueueEmpty:
                 await asyncio.sleep(0.001)
 
+        # Drop any jobs whose client already timed out or disconnected
+        pending = [j for j in pending if not j.future.done()]
+        if not pending:
+            continue
+
         try:
             async with semaphore:
                 audio, mask, slices = build_chunk_batch(pending)
-                outputs = model.model.serve([audio, mask])
-                scores = outputs.numpy().ravel()
+                if audio.shape[0] > 0:
+                    outputs = await run_in_threadpool(model.model.serve, [audio, mask])
+                    scores = outputs.numpy().ravel()
+                else:
+                    scores = np.array([], dtype=np.float32)
 
             cursor = 0
             completed = []
@@ -194,16 +213,14 @@ async def inference_worker():
                             segmentScores=result.get("segment_scores"),
                         )
                     )
-                pending.remove(job)
+                if job in pending:
+                    pending.remove(job)
 
         except Exception as e:
             for job in pending:
                 if not job.future.done():
                     job.future.set_exception(e)
             pending.clear()
-
-        finally:
-            inference_queue.task_done()
 
 
 # -----------------------------
@@ -217,7 +234,8 @@ async def predict(req: PredictRequest):
         )
 
     future = asyncio.get_running_loop().create_future()
-    job = InferenceJob(req, req.convert_to_bytes(), future)
+    raw_bytes = req.convert_to_bytes()
+    job = await run_in_threadpool(InferenceJob, req, raw_bytes, future)
 
     await inference_queue.put(job)
 
@@ -265,7 +283,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Health check
 # -----------------------------
 @app.get("/health")
-def health():
+async def health():
     return {
         "status": "ok",
         "queue_size": inference_queue.qsize(),

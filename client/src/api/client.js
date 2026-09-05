@@ -48,6 +48,6 @@ export async function detectVoice({ audioBase64, language, audioFormat }, { sign
 }
 
 export async function getHealth() {
-  const { data } = await axios.get(HEALTH_URL, { timeout: 6000 })
+  const { data } = await axios.get(HEALTH_URL, { timeout: 10000 })
   return data
 }
