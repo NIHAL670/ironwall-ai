@@ -3,7 +3,7 @@
 > **Defending truth in the age of generative AI.**
 > A full-stack system that listens to an audio stream and decides whether the voice is **Human** or **AI-Generated** — with a confidence score and a human-readable explanation of *why*.
 
-**Built by the IronWall AI team — Team `X-01`.**
+**Built by the IronWall AI team — Team `X-01`.** · 📄 **Paper:** [IronWall AI: A Chunk-Level, Explainable and Batched Architecture for Real-Time Audio Deepfake Detection](https://doi.org/10.5281/zenodo.23755056) (Zenodo preprint, 2026)
 
 ![Team](https://img.shields.io/badge/team-X--01-e11d48.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -34,6 +34,8 @@
 13. [Troubleshooting](#-troubleshooting)
 14. [Design decisions & trade-offs](#-design-decisions--trade-offs)
 15. [Roadmap](#-roadmap)
+16. [Results & honest evaluation](#-results--honest-evaluation)
+17. [Citation](#-citation)
 
 ---
 
@@ -690,6 +692,39 @@ Without a GPU, drop `--gpus all`. The container runs `uvicorn app:app --host 0.0
 - **`AudioWorklet` migration** — replace the deprecated `ScriptProcessor` capture path.
 - **Server-side history + auth** — optional, for team/enterprise deployments.
 - **Threshold calibration tooling** — a held-out validation sweep for `DEPLOY_THRESHOLD`.
+
+---
+
+## 📊 Results & honest evaluation
+
+The classifier fine-tunes **`facebook/wav2vec2-large-xlsr-53`** (~300M parameters) for binary real-vs-AI speech classification, trained on **2× Tesla T4 GPUs** (see [`ml-services/train.ipynb`](ml-services/train.ipynb)).
+
+| Epoch | Train accuracy | Val accuracy | Train loss | Val loss |
+|---|---|---|---|---|
+| 1 | 74.7% | 72.4% | 0.665 | 0.563 |
+| 2 | 77.4% | **75.1%** | 0.606 | 0.533 |
+
+**What these numbers mean**
+
+- Training and validation accuracy are both modest and close together — the model is **underfitting**, not overfitting. More epochs, unfreezing more of the backbone, and stronger augmentation are the next levers.
+- The result is **below published baselines** for speech-deepfake detection. That gap is reported as-is rather than hidden by tuning the reported metric.
+- Because a single accuracy figure says little about a detector, the dashboard's metrics view also reports **accuracy, F1, AUC and EER, including behaviour across SNR levels**, so performance on noisy audio is visible.
+
+---
+
+## 📝 Citation
+
+```bibtex
+@misc{yadav2026ironwall,
+  author    = {Yadav, Nihal},
+  title     = {IronWall AI: A Chunk-Level, Explainable and Batched Architecture for Real-Time Audio Deepfake Detection},
+  year      = {2026},
+  month     = oct,
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23755056},
+  note      = {Preprint}
+}
+```
 
 ---
 
