@@ -3,7 +3,7 @@
 > **Defending truth in the age of generative AI.**
 > A full-stack system that listens to an audio stream and decides whether the voice is **Human** or **AI-Generated** — with a confidence score and a human-readable explanation of *why*.
 
-**Built by the IronWall AI team — Team `X-01`.** · 📄 **Paper:** [IronWall AI: A Chunk-Level, Explainable and Batched Architecture for Real-Time Audio Deepfake Detection](https://doi.org/10.5281/zenodo.23755056) (Zenodo preprint, 2026)
+**Built by the IronWall AI team — Team `X-01`.** Preprint authored by [Nihal Yadav](https://github.com/NIHAL670). · 📄 **Paper:** [IronWall AI: A Chunk-Level, Explainable and Batched Architecture for Real-Time Audio Deepfake Detection](https://doi.org/10.5281/zenodo.23755056) (Zenodo preprint, 2026)
 
 ![Team](https://img.shields.io/badge/team-X--01-e11d48.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
